@@ -184,32 +184,28 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
         switch (frame->ID)
         {
 			
-        case 0x79B: // Polling message from VCU
-        if (cur > 253) // if current is more than a small amount, block replies from the LBC to the VCU with cell data
+        case 0x7BB: // reply message from the BMS, if current is more than a small amount, block replies from the LBC to the VCU with cell data
+        if (cur > 253) // this is regen or charging
         {
             blocked = 0;
         }
         else
         {
-            if (cur < 3)
+            if (cur < 3) //this is anything less than a few amps
         {
             blocked = 0;
         }
-        else
+        else 
         {
             blocked = 1;
         }
         }
           break;    
-          
+
         case 0x1DB:        
-        cur = frame->data[0]; // if low current or regen/charging, then allow messages to go through
+        cur = frame->data[0]; // Get current from BMS, only checking first byte, can tell if it's low current or charging with this.
       
-        /*
-        cur = (frame->data[0] << 3) + (frame->data[1] >>5); //getting current from LBC
-        if(cur>1023)cur -=2048; //check if negative
-        cur = cur / 2;
-*/
+       
         break;
         }
 
