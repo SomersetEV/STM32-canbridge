@@ -185,7 +185,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
         {
 			
         case 0x7BB: // reply message from the BMS, if current is more than a small amount, block replies from the LBC to the VCU with cell data
-        if (cur > 253) // this is regen or charging
+        if (cur > 245) // this is regen or charging
         {
             blocked = 0;
         }
