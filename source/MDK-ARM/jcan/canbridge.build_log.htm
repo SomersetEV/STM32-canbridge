@@ -1,0 +1,122 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: µVision V5.41.0.0
+Copyright (C) 2024 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: test user, user comapnu , LIC=----
+ 
+Tool Versions:
+Toolchain:       MDK-Lite  Version: 5.41.0.0
+Toolchain Path:  C:\Users\User\AppData\Local\Keil_v5\ARM\ARMCLANG\Bin
+C Compiler:      ArmClang.exe V6.22
+Assembler:       Armasm.exe V6.22
+Linker/Locator:  ArmLink.exe V6.22
+Library Manager: ArmAr.exe V6.22
+Hex Converter:   FromElf.exe V6.22
+CPU DLL:         SARMCM3.DLL V5.41.0.0
+Dialog DLL:      DCM.DLL V1.17.5.0
+Target DLL:      UL2CM3.DLL V1.164.14.0
+Dialog DLL:      TCM.DLL V1.56.4.0
+ 
+<h2>Project:</h2>
+C:\Users\User\Downloads\Canbridge oliver land rover 2nd Nov build\Software\CANBRIDGE-2port\source\MDK-ARM\jcan.uvprojx
+Project File Date:  11/07/2024
+
+<h2>Output:</h2>
+*** Using Compiler 'V6.22', folder: 'C:\Users\User\AppData\Local\Keil_v5\ARM\ARMCLANG\Bin'
+Build target 'Release'
+compiling can-bridge-firmware.c...
+../Src/can-bridge-firmware.c(179): warning: unused variable 'temp' [-Wunused-variable]
+  179 |     uint16_t temp; // Temporary variable used in many instances
+      |              ^~~~
+../Src/can-bridge-firmware.c(37): warning: unused variable 'charge_time' [-Wunused-const-variable]
+   37 | static const uint16_t charge_time[4][7] =  {
+      |                       ^~~~~~~~~~~
+../Src/can-bridge-firmware.c(44): warning: unused variable 'temp_lut' [-Wunused-const-variable]
+   44 | static const uint8_t temp_lut[13] = {25, 28, 31, 34, 37, 50, 63, 76, 80, 82, 85, 87, 90};
+      |                      ^~~~~~~~
+../Src/can-bridge-firmware.c(48): warning: unused variable 'max_charge_80_requested' [-Wunused-variable]
+   48 | static volatile uint8_t max_charge_80_requested = 0;
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~
+../Src/can-bridge-firmware.c(53): warning: unused variable 'battery_soc_pptt' [-Wunused-variable]
+   53 | static volatile uint16_t battery_soc_pptt = 0;
+      |                          ^~~~~~~~~~~~~~~~
+../Src/can-bridge-firmware.c(54): warning: unused variable 'battery_soc' [-Wunused-variable]
+   54 | static volatile uint8_t battery_soc = 0;
+      |                         ^~~~~~~~~~~
+../Src/can-bridge-firmware.c(55): warning: unused variable 'dash_soc' [-Wunused-variable]
+   55 | static volatile int16_t dash_soc = 0;
+      |                         ^~~~~~~~
+../Src/can-bridge-firmware.c(56): warning: unused variable 'swap_5c0_idx' [-Wunused-variable]
+   56 | static volatile uint8_t swap_5c0_idx = 0;
+      |                         ^~~~~~~~~~~~
+../Src/can-bridge-firmware.c(57): warning: unused variable 'VCM_WakeUpSleepCommand' [-Wunused-variable]
+   57 | static volatile uint8_t VCM_WakeUpSleepCommand = 0;
+      |                         ^~~~~~~~~~~~~~~~~~~~~~
+../Src/can-bridge-firmware.c(58): warning: unused variable 'Byte2_50B' [-Wunused-variable]
+   58 | static volatile uint8_t Byte2_50B               = 0;
+      |                         ^~~~~~~~~
+../Src/can-bridge-firmware.c(59): warning: unused variable 'ALU_question' [-Wunused-variable]
+   59 | static volatile uint8_t ALU_question = 0;
+      |                         ^~~~~~~~~~~~
+../Src/can-bridge-firmware.c(60): warning: unused variable 'cmr_idx' [-Wunused-variable]
+   60 | static volatile uint8_t cmr_idx = QUICK_CHARGE;
+      |                         ^~~~~~~
+../Src/can-bridge-firmware.c(61): warning: unused variable 'GIDS' [-Wunused-variable]
+   61 | static volatile uint16_t GIDS                           = 0; 
+      |                          ^~~~
+../Src/can-bridge-firmware.c(62): warning: unused variable 'MaxGIDS' [-Wunused-variable]
+   62 | static volatile uint16_t MaxGIDS = 0;
+      |                          ^~~~~~~
+../Src/can-bridge-firmware.c(63): warning: unused variable 'main_battery_temp' [-Wunused-variable]
+   63 | static volatile uint8_t main_battery_temp = 0;
+      |                         ^~~~~~~~~~~~~~~~~
+../Src/can-bridge-firmware.c(64): warning: unused variable 'battery_can_bus' [-Wunused-variable]
+   64 | static volatile uint8_t battery_can_bus = 2; // keeps track on which CAN bus the battery talks.
+      |                         ^~~~~~~~~~~~~~~
+../Src/can-bridge-firmware.c(70): warning: unused variable 'cellvoltages1' [-Wunused-variable]
+   70 | static CAN_FRAME cellvoltages1 = {.ID = 0x7BB, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x40, 0x01, 0x2F, 0x5E, 0x00, 0x00, 0x00, 0x00}};
+      |                  ^~~~~~~~~~~~~
+../Src/can-bridge-firmware.c(71): warning: unused variable 'cellvoltages2' [-Wunused-variable]
+   71 | static CAN_FRAME cellvoltages2 = {.ID = 0x7BB, .dlc = 1, .ide = 0, .rtr = 0, .data = {0}};
+      |                  ^~~~~~~~~~~~~
+../Src/can-bridge-firmware.c(72): warning: unused variable 'cellvoltages3' [-Wunused-variable]
+   72 | static CAN_FRAME cellvoltages3 = {.ID = 0x7BB, .dlc = 1, .ide = 0, .rtr = 0, .data = {0x00}};
+      |                  ^~~~~~~~~~~~~
+../Src/can-bridge-firmware.c(74): warning: unused variable 'PRUN_39X' [-Wunused-variable]
+   74 | volatile        static uint8_t PRUN_39X                 = 0;
+      |                                ^~~~~~~~
+20 warnings generated.
+linking...
+Program Size: Code=12890 RO-data=398 RW-data=24 ZI-data=2912  
+FromELF: creating hex file...
+After Build - User command #1: fromelf --m32 --output=..\output\canbridge.srec jcan\canbridge.axf
+".\jcan\canbridge.axf" - 0 Error(s), 20 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: ARM
+                https://www.keil.com/pack/ARM.CMSIS.6.1.0.pack
+                ARM::CMSIS@6.1.0
+                CMSIS (Common Microcontroller Software Interface Standard)
+   * Component: CORE Version: 6.1.0
+
+Package Vendor: Keil
+                https://www.keil.com/pack/Keil.STM32F1xx_DFP.2.4.1.pack
+                Keil::STM32F1xx_DFP@2.4.1
+                STMicroelectronics STM32F1 Series Device Support, Drivers and Examples
+
+<h2>Collection of Component include folders:</h2>
+  ./RTE/_Release
+  C:/Users/User/AppData/Local/Arm/Packs/ARM/CMSIS/6.1.0/CMSIS/Core/Include
+  C:/Users/User/AppData/Local/Arm/Packs/Keil/STM32F1xx_DFP/2.4.1/Device/Include
+
+<h2>Collection of Component Files used:</h2>
+
+   * Component: ARM::CMSIS:CORE@6.1.0
+Build Time Elapsed:  00:00:05
+</pre>
+</body>
+</html>
