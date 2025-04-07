@@ -1,4 +1,4 @@
-jcan/stm32f1xx_hal_rcc.o: \
+./jcan/stm32f1xx_hal_rcc.o: \
   ..\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_rcc.c \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal.h \
   ..\Inc\stm32f1xx_hal_conf.h \

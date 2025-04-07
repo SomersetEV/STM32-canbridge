@@ -555,13 +555,13 @@ ARM Macro Assembler    Page 9
               00000400 
               00000200 
               00000000 
-Command Line: --debug --xref --diag_suppress=A1950W --cpu=Cortex-M3 --depend=jc
-an\startup_stm32f105xc.d -ojcan\startup_stm32f105xc.o -I.\RTE\_Debug -IC:\Users
-\User\AppData\Local\Arm\Packs\ARM\CMSIS\6.1.0\CMSIS\Core\Include -IC:\Users\Use
-r\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include --predefine="
-__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 541" --predefine="STM32F10X_
-CL SETA 1" --predefine="_RTE_ SETA 1" --list=startup_stm32f105xc.lst startup_st
-m32f105xc.s
+Command Line: --debug --xref --diag_suppress=9931,A1950W --cpu=Cortex-M3 --depe
+nd=.\jcan\startup_stm32f105xc.d -o.\jcan\startup_stm32f105xc.o -I.\RTE\_Release
+ -IC:\Users\benay\AppData\Local\Arm\Packs\ARM\CMSIS\6.1.0\CMSIS\Core\Include -I
+C:\Users\benay\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include 
+--predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 542" --predefin
+e="STM32F10X_CL SETA 1" --predefine="_RTE_ SETA 1" --list=startup_stm32f105xc.l
+st startup_stm32f105xc.s
 
 
 

@@ -1,4 +1,4 @@
-jcan/system_stm32f1xx.o: ..\Src\system_stm32f1xx.c \
+./jcan/system_stm32f1xx.o: ..\Src\system_stm32f1xx.c \
   ..\Drivers\CMSIS\Device\ST\STM32F1xx\Include\stm32f1xx.h \
   ..\Drivers\CMSIS\Device\ST\STM32F1xx\Include\stm32f105xc.h \
   ..\Drivers\CMSIS\Include\core_cm3.h \

@@ -82,7 +82,7 @@ int main(void)
             // 1 Second has passed
             last_tick = HAL_GetTick();
             
-            one_second_ping();
+      
 						
 						if((LenCan( MYCAN1, CAN_RX )) == 0 && (LenCan( MYCAN2, CAN_RX ) == 0)){
 							//Can bus is idle

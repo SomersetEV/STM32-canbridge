@@ -26,6 +26,5 @@ volatile extern uint8_t My_Battery;
 volatile extern uint8_t My_Leaf;
 
 void can_handler(uint8_t can_bus, CAN_FRAME *frame);
-void one_second_ping( void );
 
 #endif
