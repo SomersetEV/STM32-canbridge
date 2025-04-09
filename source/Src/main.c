@@ -25,7 +25,6 @@
 #include "can-bridge-firmware.h"
 
 static MYCAN_Errors mErrors[2] = {0};
-static uint32_t last_tick = 0;
 uint32_t au32_UID[3] = {0}; 
 static const uint8_t au8_lock[12] = {0x33,0x44,0x55,0x66,0x11,0x22,0x33,0x44,0x77,0x66,0x55,0x44};
 static uint8_t config_Bits[2] = {0};
@@ -76,26 +75,7 @@ int main(void)
     while (1)
     {           
         //HAL_IWDG_Refresh(&hiwdg);
-      
-        if(( HAL_GetTick() - last_tick ) >= 1000u )
-        {
-            // 1 Second has passed
-            last_tick = HAL_GetTick();
-            
-      
-						
-						if((LenCan( MYCAN1, CAN_RX )) == 0 && (LenCan( MYCAN2, CAN_RX ) == 0)){
-							//Can bus is idle
-							idleTick++;
-							
-							if(idleTick > 5){ //No can messages for 5s
-								HAL_SuspendTick();
-								HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
-								HAL_ResumeTick();
-								idleTick = 0;
-							}
-						}
-        }
+   
         
         if( LenCan( MYCAN1, CAN_RX ) > 0 )
         {
@@ -132,7 +112,7 @@ int main(void)
         mErrors[1].passive = ( canErrors & 0x02 ) >> 1;
         mErrors[1].errorFlag = canErrors & 1;       
         
-    }
+      }
 }
 
 /**

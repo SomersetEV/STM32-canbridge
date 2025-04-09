@@ -50,7 +50,13 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
 
     if (1)
     { 
+        switch (frame->ID)
+        {
+        default:
 
+        blocked = 0;
+        break;
+        }
     } 
 
         if (!blocked)
