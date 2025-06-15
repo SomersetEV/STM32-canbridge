@@ -43,6 +43,17 @@ void convert_5c0_to_array(Leaf_2011_5C0_message * src, uint8_t * dest);
 void calc_sum2(CAN_FRAME *frame);
 void calc_checksum4(CAN_FRAME *frame);
 
+static volatile int16_t voltage;
+static volatile int16_t voltagelsb;
+static volatile int16_t voltagemsb;
+static volatile int16_t current;
+static volatile int16_t currentlsb;
+static volatile int16_t currentmsb;
+static volatile int8_t plugstate;
+static volatile int8_t SoC;
+static volatile int8_t Batttemp;
+
+
 void can_handler(uint8_t can_bus, CAN_FRAME *frame)
 {
    // uint16_t temp; // Temporary variable used in many instances
@@ -50,12 +61,88 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
 
     if (1)
     { 
-        switch (frame->ID)
+
+      
+       switch (frame->ID)
         {
+              //following frames blocking out Sevcon messages from interfearing with BMS and vica verca
+            case 0x14FF21D0: //Voltage and Current information from BMS
+              // Get voltage
+              // Extract lower 5 bits of byte 6 (MSB part)
+              voltagemsb = frame->data[2] & 0x1F;  // 0x1F = 00011111b to mask lower 5 bits
+              // Extract full byte 7 (LSB)
+              voltagelsb = frame->data[3];
+              // Combine MSB and LSB into 16-bit raw value
+              voltage = (voltagemsb << 8) | voltagelsb;
+
+             // Get current
+              // Extract lower 5 bits of byte 6 (MSB part)
+              currentmsb = frame->data[4] & 0x1F;  // 0x1F = 00011111b to mask lower 5 bits
+              // Extract full byte 7 (LSB)
+              currentlsb = frame->data[5];
+              // Combine MSB and LSB into 16-bit raw value
+              current = (currentmsb << 8) | currentlsb;
+
+              blocked = 1;
+            break;
+
+            
+
+            case 0x14FF20D0: //Plug state from BMS
+              // Get Plug state
+             // plugstate = byte 5 -6 LSB across half of each byte //Still to figure out
+              blocked = 1;
+            break;
+
+           
+            case  0x14FF24D0: //SOC
+              SoC = frame->data[1];
+
+              blocked = 1;
+            break;
+
+            case  0x14FF23D0: //temperature
+              Batttemp = frame->data[7];
+
+              blocked = 1;
+            break;
+
+            case 0x101:
+
+              blocked = 1;
+            break;
+
+            case 0x102:
+
+              blocked = 1;
+            break;
+
+            case 0x103:
+
+              blocked = 1;
+            break;
+  
+            case 0x104:
+
+              blocked = 1;
+            break;
+
+            case 0x105:
+
+              blocked = 1;
+            break;
+
+            case 0x701:
+
+              blocked = 1;
+            break;
+
         default:
 
         blocked = 0;
         break;
+
+
         }
     } 
 
@@ -70,4 +157,5 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
                 PushCan(0, CAN_TX, frame);
             }
         }
+            
 }
