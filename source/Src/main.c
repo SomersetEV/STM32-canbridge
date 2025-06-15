@@ -29,7 +29,14 @@ uint32_t au32_UID[3] = {0};
 static const uint8_t au8_lock[12] = {0x33,0x44,0x55,0x66,0x11,0x22,0x33,0x44,0x77,0x66,0x55,0x44};
 static uint8_t config_Bits[2] = {0};
 static uint32_t canErrors = 0;
+static uint8_t Tick;
 static uint8_t idleTick = 0;
+static CAN_FRAME Plugstate_message = {.ID = 0x14ebd0d8, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x20, 0xff, 0x0A, 0x14, 0x00, 0x00, 0x00, 0x00}}; 
+static CAN_FRAME voltcur_message = {.ID = 0x14ebd0d8, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x21, 0xff, 0x0A, 0x14, 0x00, 0x00, 0x00, 0x00}}; 
+static CAN_FRAME temp_message = {.ID = 0x14ebd0d8, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x23, 0xff, 0x0A, 0x14, 0x00, 0x00, 0x00, 0x00}};
+static CAN_FRAME SoC_message = {.ID = 0x14ebd0d8, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x24, 0xff, 0x0A, 0x14, 0x00, 0x00, 0x00, 0x00}};
+
+
 
 void SystemClock_Config(void);
 
@@ -55,6 +62,8 @@ int main(void)
 		MX_GPIO_Init();
 		MX_CAN1_Init();
 		MX_CAN2_Init();
+
+    
     
     //MX_IWDG_Init(); //Init watchdog
 
@@ -95,6 +104,20 @@ int main(void)
 
         sendCan( MYCAN1 );
         sendCan( MYCAN2 ); 
+
+        if (Tick == 0)
+    {
+     PushCan(0, CAN_TX, &Plugstate_message);
+     PushCan(0, CAN_TX, &voltcur_message);
+     PushCan(0, CAN_TX, &temp_message);
+     PushCan(0, CAN_TX, &SoC_message);
+
+    }
+
+    if (Tick > 19)
+    {
+     Tick = 0;
+    }
         
         canErrors = hcan1.Instance->ESR;
         mErrors[0].rec = canErrors >> 24;
@@ -175,3 +198,11 @@ void Error_Handler(void)
 		HAL_NVIC_SystemReset ( );
 }
 
+
+uint8_t getTick(void) {
+    return Tick;
+}
+
+void setTick(uint8_t value) {
+    Tick = value;
+}

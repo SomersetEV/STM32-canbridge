@@ -32,6 +32,11 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <stdint.h>
+
+uint8_t getTick(void);
+void setTick(uint8_t value);
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

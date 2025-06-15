@@ -1,4 +1,5 @@
 #include "can.h"
+#include "main.h"
 
 #include "can-bridge-firmware.h"
 #include "nissan_can_structs.h"
@@ -43,15 +44,17 @@ void convert_5c0_to_array(Leaf_2011_5C0_message * src, uint8_t * dest);
 void calc_sum2(CAN_FRAME *frame);
 void calc_checksum4(CAN_FRAME *frame);
 
-static volatile int16_t voltage;
+static volatile int16_t voltage = 0;
 static volatile int16_t voltagelsb;
 static volatile int16_t voltagemsb;
-static volatile int16_t current;
+static volatile int16_t current = 0;
 static volatile int16_t currentlsb;
-static volatile int16_t currentmsb;
-static volatile int8_t plugstate;
-static volatile int8_t SoC;
-static volatile int8_t Batttemp;
+static volatile int16_t currentmsb ;
+static volatile int8_t plugstate = 0;
+static volatile int8_t SoC = 0;
+static volatile int8_t Batttemp = 0;
+static CAN_FRAME screenSoC_message = {.ID = 0x355, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+static CAN_FRAME VCT_message = {.ID = 0x356, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
 
 void can_handler(uint8_t can_bus, CAN_FRAME *frame)
@@ -82,6 +85,19 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
               currentlsb = frame->data[5];
               // Combine MSB and LSB into 16-bit raw value
               current = (currentmsb << 8) | currentlsb;
+              uint8_t t = getTick();
+              setTick(t + 1);  
+
+              VCT_message.data[0] = voltagemsb;
+              VCT_message.data[1] = voltagelsb;
+              VCT_message.data[2] = currentmsb;
+              VCT_message.data[3] = currentlsb;
+              VCT_message.data[4] = Batttemp;
+              PushCan(1, CAN_TX, &VCT_message);
+
+
+              screenSoC_message.data[0] = SoC;
+              PushCan(1, CAN_TX, &screenSoC_message);
 
               blocked = 1;
             break;
@@ -99,6 +115,8 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
               SoC = frame->data[1];
 
               blocked = 1;
+
+
             break;
 
             case  0x14FF23D0: //temperature
