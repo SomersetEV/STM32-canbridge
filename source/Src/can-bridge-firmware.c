@@ -44,17 +44,26 @@ void convert_5c0_to_array(Leaf_2011_5C0_message * src, uint8_t * dest);
 void calc_sum2(CAN_FRAME *frame);
 void calc_checksum4(CAN_FRAME *frame);
 
-static volatile int16_t voltage = 0;
-static volatile int16_t voltagelsb;
-static volatile int16_t voltagemsb;
-static volatile int16_t current = 0;
-static volatile int16_t currentlsb;
-static volatile int16_t currentmsb ;
-static volatile int8_t plugstate = 0;
-static volatile int8_t SoC = 0;
-static volatile int8_t Batttemp = 0;
+float voltage = 400;
+float current = 500;
+static volatile int8_t plugstate = 0x00;
+static volatile int16_t SoC = 69;
+static volatile int8_t Batttemp = 69;
+static uint16_t Tick = 0;
+//static int soctick = 0;
 static CAN_FRAME screenSoC_message = {.ID = 0x355, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 static CAN_FRAME VCT_message = {.ID = 0x356, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+static CAN_FRAME Invmessage = {.ID = 0x181, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+static CAN_FRAME driveinhibit = {.ID = 0x201, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+
+
+// test
+static CAN_FRAME Plugstate_message = {.ID = 0x14ebd0d8, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x20, 0xff, 0x0a, 0x02, 0x00, 0x00, 0x00, 0x00}}; 
+static CAN_FRAME voltcur_message = {.ID = 0x14ebd0d8, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x21, 0xff, 0x0a, 0x02, 0x00, 0x00, 0x00, 0x00}}; 
+static CAN_FRAME temp_message = {.ID = 0x14ebd0d8, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x23, 0xff, 0x0a, 0x02, 0x00, 0x00, 0x00, 0x00}};
+static CAN_FRAME SoC_message = {.ID = 0x14ebd0d8, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x24, 0xff, 0x0a, 0x02, 0x00, 0x00, 0x00, 0x00}};
+//will send every 10 ticks (0x0a) each tick is 50ms. Will sent 2 times (0x02)
+
 
 
 void can_handler(uint8_t can_bus, CAN_FRAME *frame)
@@ -71,33 +80,28 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
               //following frames blocking out Sevcon messages from interfearing with BMS and vica verca
             case 0x14FF21D0: //Voltage and Current information from BMS
               // Get voltage
-              // Extract lower 5 bits of byte 6 (MSB part)
-              voltagemsb = frame->data[2] & 0x1F;  // 0x1F = 00011111b to mask lower 5 bits
-              // Extract full byte 7 (LSB)
-              voltagelsb = frame->data[3];
-              // Combine MSB and LSB into 16-bit raw value
-              voltage = (voltagemsb << 8) | voltagelsb;
 
+              uint16_t voltage_raw = (frame->data[2]) | (frame->data[3] << 8);
+               // Convert to physical value if needed
+               voltage = voltage_raw * 10.0f;
+               // Prepare voltage for outgoing CAN message (convert back to raw if needed)
+                uint16_t voltage_out_raw = (uint16_t)(voltage);
+          
              // Get current
-              // Extract lower 5 bits of byte 6 (MSB part)
-              currentmsb = frame->data[4] & 0x1F;  // 0x1F = 00011111b to mask lower 5 bits
-              // Extract full byte 7 (LSB)
-              currentlsb = frame->data[5];
-              // Combine MSB and LSB into 16-bit raw value
-              current = (currentmsb << 8) | currentlsb;
-              uint8_t t = getTick();
-              setTick(t + 1);  
+              uint16_t current_raw = (frame->data[4]) | (frame->data[5] << 8);
+               // Convert to physical value if needed
+               current = current_raw * 10.0f;
+                 // Prepare current for outgoing CAN message (convert back to raw if needed)
+              uint16_t current_out_raw = (uint16_t)(current);
 
-              VCT_message.data[0] = voltagemsb;
-              VCT_message.data[1] = voltagelsb;
-              VCT_message.data[2] = currentmsb;
-              VCT_message.data[3] = currentlsb;
-              VCT_message.data[4] = Batttemp;
-              PushCan(1, CAN_TX, &VCT_message);
+              VCT_message.data[0] = voltage_out_raw & 0xFF;        // LSB
+              VCT_message.data[1] = (voltage_out_raw >> 8) & 0xFF; // MSB
 
-
-              screenSoC_message.data[0] = SoC;
-              PushCan(1, CAN_TX, &screenSoC_message);
+              VCT_message.data[2] = current_out_raw & 0xFF;        // LSB
+              VCT_message.data[3] = (current_out_raw >> 8) & 0xFF; // MSB
+              
+             // screenSoC_message.data[0] = SoC;
+              //PushCan(0, CAN_TX, &screenSoC_message); // send message to screen
 
               blocked = 1;
             break;
@@ -106,51 +110,137 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
 
             case 0x14FF20D0: //Plug state from BMS
               // Get Plug state
-             // plugstate = byte 5 -6 LSB across half of each byte //Still to figure out
+             plugstate = frame->data[5];
+
+             if (plugstate == 0x01)
+             {
+               driveinhibit.data[0] = 1;
+               driveinhibit.data[1] = 1;
+               driveinhibit.data[2] = 1;
+               driveinhibit.data[3] = 1;
+               driveinhibit.data[4] = 1;
+               driveinhibit.data[5] = 1;
+               driveinhibit.data[6] = 1;
+               driveinhibit.data[7] = 1;
+              PushCan(0, CAN_TX, &driveinhibit); // push drive inhibit message to sevconn
+             }
+             //else 
+             //{
+            //  driveinhibit.data[0] = 0;
+            // }
+
+             
+             /*
+             0x00 Unknown
+             0x01 disconnected
+             0x02 connected
+             0x03 plug locked
+             0x04 waiting for disconect
+             0x05 charge plug active
+
+
+             
+             */
               blocked = 1;
             break;
 
            
-            case  0x14FF24D0: //SOC
-              SoC = frame->data[1];
+            case  0x14FF24D0: //SOC 
 
+              SoC = frame->data[1];
+              //soctick = 0;
+              screenSoC_message.data[0] = SoC;
+              
               blocked = 1;
 
 
             break;
 
             case  0x14FF23D0: //temperature
-              Batttemp = frame->data[7];
+              Batttemp = frame->data[3];
+               VCT_message.data[4] = 0x00;
+               VCT_message.data[5] = Batttemp;
+             // VCT_message.data[4] = Batttemp;
+              blocked = 1;
+            break;
+
+            case  0x183: // new ID from Sevon
+              PushCan(0, CAN_TX, &screenSoC_message); // send BMS message to screen
+              PushCan(0, CAN_TX, &VCT_message); //send BMS message to screen
+
+              if (plugstate == 0x01) // if disconnected then send inverter data to screen for drive mode
+              { 
+                // Vehicle speed is 16 bits, little endian, starting at byte 0
+                uint16_t vehicle_speed_raw = frame->data[0] | (frame->data[1] << 8);
+
+                // If scaling is specified in your DBC, apply it here (example: 0.1 km/h per bit)
+               float vehicle_speed = vehicle_speed_raw *  0.45f;
+
+                // 3. Convert back to 16-bit integer for CAN transmission
+                uint16_t vehicle_speed_out = (uint16_t)vehicle_speed;
+
+                // 4. Insert into outgoing CAN message at the same position and format (little-endian, bytes 0 and 1)
+                Invmessage.data[0] = vehicle_speed_out & 0xFF;        // LSB
+                Invmessage.data[1] = (vehicle_speed_out >> 8) & 0xFF; // MSB
+                Invmessage.data[2] = frame->data[2];
+                Invmessage.data[3] = frame->data[3];
+                Invmessage.data[4] = frame->data[4];
+                Invmessage.data[5] = frame->data[5];
+                Invmessage.data[6] = frame->data[6];
+                Invmessage.data[7] = frame->data[7];
+                PushCan(0, CAN_TX, &Invmessage); // push sevcon message to screen
+              }
+
+            Tick = Tick + 1;
+            if ( Tick > 50 ) //resets every second
+            {
+              //send diag messages to BMS
+            PushCan(1, CAN_TX, &Plugstate_message);
+            PushCan(1, CAN_TX, &voltcur_message);
+            PushCan(1, CAN_TX, &temp_message);
+            PushCan(1, CAN_TX, &SoC_message);
+            Tick = 0;
+            }
+
+            
+ 
+              blocked = 1;
+            break;
+            /*
+            case 0x181: // vehicle speed and odo from sevcon
+             //
+
+            PushCan(0, CAN_TX, &VCT_message); //send message to screen
+            PushCan(0, CAN_TX, &screenSoC_message); // send message to screen
+            //if (Tick == 0) // send messages to BMS to request data
+            // {
+              PushCan(1, CAN_TX, &Plugstate_message);
+              PushCan(1, CAN_TX, &voltcur_message);
+              PushCan(1, CAN_TX, &temp_message);
+              PushCan(1, CAN_TX, &SoC_message);
+            //  }
+
+           
+
+              blocked = 1;
+            break;
+*/
+            case 0x217:
 
               blocked = 1;
             break;
 
-            case 0x101:
+            case 0x205:
 
               blocked = 1;
             break;
 
-            case 0x102:
+            case 0x377:
 
               blocked = 1;
             break;
 
-            case 0x103:
-
-              blocked = 1;
-            break;
-  
-            case 0x104:
-
-              blocked = 1;
-            break;
-
-            case 0x105:
-
-              blocked = 1;
-            break;
-
-            case 0x701:
+            case 0x135:
 
               blocked = 1;
             break;

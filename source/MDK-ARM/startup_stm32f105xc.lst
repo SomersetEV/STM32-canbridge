@@ -559,7 +559,7 @@ Command Line: --debug --xref --diag_suppress=9931,A1950W --cpu=Cortex-M3 --depe
 nd=.\jcan\startup_stm32f105xc.d -o.\jcan\startup_stm32f105xc.o -I.\RTE\_Release
  -IC:\Users\benay\AppData\Local\Arm\Packs\ARM\CMSIS\6.1.0\CMSIS\Core\Include -I
 C:\Users\benay\AppData\Local\Arm\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include 
---predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 541" --predefin
+--predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 542" --predefin
 e="STM32F10X_CL SETA 1" --predefine="_RTE_ SETA 1" --list=startup_stm32f105xc.l
 st startup_stm32f105xc.s
 
