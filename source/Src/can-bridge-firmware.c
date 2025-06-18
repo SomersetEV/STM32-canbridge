@@ -49,12 +49,18 @@ float current = 500;
 static volatile int8_t plugstate = 0x00;
 static volatile int16_t SoC = 69;
 static volatile int8_t Batttemp = 69;
+uint16_t brakelightvoltage = 0;
+//float = throttlevalue;
 static uint16_t Tick = 0;
+uint16_t vehicle_speed_out;
+ uint16_t m_temp;
 //static int soctick = 0;
 static CAN_FRAME screenSoC_message = {.ID = 0x355, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 static CAN_FRAME VCT_message = {.ID = 0x356, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 static CAN_FRAME Invmessage = {.ID = 0x181, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+static CAN_FRAME mtempmsg = {.ID = 0x401, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 static CAN_FRAME driveinhibit = {.ID = 0x201, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+static CAN_FRAME brakelight = {.ID = 0x301, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
 
 // test
@@ -90,7 +96,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
              // Get current
               uint16_t current_raw = (frame->data[4]) | (frame->data[5] << 8);
                // Convert to physical value if needed
-               current = current_raw * 10.0f;
+               current = current_raw;
                  // Prepare current for outgoing CAN message (convert back to raw if needed)
               uint16_t current_out_raw = (uint16_t)(current);
 
@@ -112,22 +118,15 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
               // Get Plug state
              plugstate = frame->data[5];
 
-             if (plugstate == 0x01)
+             if (plugstate != 0x01)
+             {
+               driveinhibit.data[0] = 0;
+             // PushCan(0, CAN_TX, &driveinhibit); // push drive inhibit message to sevconn
+             }
+             else 
              {
                driveinhibit.data[0] = 1;
-               driveinhibit.data[1] = 1;
-               driveinhibit.data[2] = 1;
-               driveinhibit.data[3] = 1;
-               driveinhibit.data[4] = 1;
-               driveinhibit.data[5] = 1;
-               driveinhibit.data[6] = 1;
-               driveinhibit.data[7] = 1;
-              PushCan(0, CAN_TX, &driveinhibit); // push drive inhibit message to sevconn
              }
-             //else 
-             //{
-            //  driveinhibit.data[0] = 0;
-            // }
 
              
              /*
@@ -141,7 +140,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
 
              
              */
-              blocked = 1;
+              blocked = 0;
             break;
 
            
@@ -150,23 +149,27 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
               SoC = frame->data[1];
               //soctick = 0;
               screenSoC_message.data[0] = SoC;
-              
               blocked = 1;
 
 
             break;
 
             case  0x14FF23D0: //temperature
-              Batttemp = frame->data[3];
-               VCT_message.data[4] = 0x00;
-               VCT_message.data[5] = Batttemp;
-             // VCT_message.data[4] = Batttemp;
+              Batttemp = frame->data[6];
+              // Convert to 16-bit scaled value for first receiver
+              uint16_t btemp_raw = Batttemp * 10.0f;
+
+              // Place into outgoing CAN message bytes 4 and 5 (little-endian)
+              VCT_message.data[4] = btemp_raw & 0xFF;        // LSB
+              VCT_message.data[5] = (btemp_raw >> 8) & 0xFF; // MSB
               blocked = 1;
             break;
 
             case  0x183: // new ID from Sevon
               PushCan(0, CAN_TX, &screenSoC_message); // send BMS message to screen
               PushCan(0, CAN_TX, &VCT_message); //send BMS message to screen
+              PushCan(0, CAN_TX, &driveinhibit); // push drive inhibit message to sevconn
+              PushCan(0, CAN_TX, &brakelight); // brake light on regen message to sevvcon
 
               if (plugstate == 0x01) // if disconnected then send inverter data to screen for drive mode
               { 
@@ -177,7 +180,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
                float vehicle_speed = vehicle_speed_raw *  0.45f;
 
                 // 3. Convert back to 16-bit integer for CAN transmission
-                uint16_t vehicle_speed_out = (uint16_t)vehicle_speed;
+                vehicle_speed_out = (uint16_t)vehicle_speed;
 
                 // 4. Insert into outgoing CAN message at the same position and format (little-endian, bytes 0 and 1)
                 Invmessage.data[0] = vehicle_speed_out & 0xFF;        // LSB
@@ -189,6 +192,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
                 Invmessage.data[6] = frame->data[6];
                 Invmessage.data[7] = frame->data[7];
                 PushCan(0, CAN_TX, &Invmessage); // push sevcon message to screen
+                PushCan(0, CAN_TX, &mtempmsg); // push sevcon message to screen
               }
 
             Tick = Tick + 1;
@@ -207,7 +211,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
               blocked = 1;
             break;
             /*
-            case 0x181: // vehicle speed and odo from sevcon
+            case 0x181: // vehicle speed and odo from sevcon not used in Bond bug as adjusting speed through canbridge
              //
 
             PushCan(0, CAN_TX, &VCT_message); //send message to screen
@@ -226,7 +230,20 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
             break;
 */
             case 0x217:
+            int16_t throttlevalue = frame->data[0] | (frame->data[1] << 8); // Little-endian extraction
+            if (throttlevalue < 1 && vehicle_speed_out > 2) //change back to throttle position
+            {
+              brakelightvoltage =  0x0b00; //12v to brake light relay
+              brakelight.data[0] = brakelightvoltage & 0xFF;        // LSB
+              brakelight.data[1] = (brakelightvoltage >> 8) & 0xFF; // MSB
+            }
+            else
+            {
+              brakelightvoltage = 0; // switch off brake light relay
+              brakelight.data[0] = brakelightvoltage & 0xFF;        // LSB
+              brakelight.data[1] = (brakelightvoltage >> 8) & 0xFF; // MSB
 
+            }
               blocked = 1;
             break;
 
@@ -241,8 +258,13 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
             break;
 
             case 0x135:
+            m_temp = frame->data[4] | (frame->data[5] << 8); // Little-endian extraction
+            mtempmsg.data[0] = m_temp & 0xFF;        // LSB
+            mtempmsg.data[1] = (m_temp >> 8) & 0xFF; // MSB
 
-              blocked = 1;
+            
+
+            blocked = 1;
             break;
 
         default:
