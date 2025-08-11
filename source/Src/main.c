@@ -30,6 +30,7 @@ static const uint8_t au8_lock[12] = {0x33,0x44,0x55,0x66,0x11,0x22,0x33,0x44,0x7
 static uint8_t config_Bits[2] = {0};
 static uint32_t canErrors = 0;
 static uint8_t idleTick = 0;
+static uint32_t last_tick = 0;
 
 
 void SystemClock_Config(void);
@@ -78,7 +79,27 @@ int main(void)
     while (1)
     {           
         //HAL_IWDG_Refresh(&hiwdg);
+      
+         if(( HAL_GetTick() - last_tick ) >= 200u )
+        {
+            // 200ms has passed
+            last_tick = HAL_GetTick();
    
+            tasks200ms();
+						
+						if((LenCan( MYCAN1, CAN_RX )) == 0 && (LenCan( MYCAN2, CAN_RX ) == 0)){
+							//Can bus is idle
+							idleTick++;
+							
+							if(idleTick > 25){ //No can messages for 5s
+								HAL_SuspendTick();
+								HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+								HAL_ResumeTick();
+								idleTick = 0;
+							}
+						}
+        }
+
         
         if( LenCan( MYCAN1, CAN_RX ) > 0 )
         {

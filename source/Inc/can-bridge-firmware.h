@@ -25,6 +25,12 @@
 volatile extern uint8_t My_Battery;
 volatile extern uint8_t My_Leaf;
 
+static uint16_t Tick = 0;
+static uint16_t SoC = 0;
+
+static CAN_FRAME DCDCenablemessage = {.ID = 0x18008FD0, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+
 void can_handler(uint8_t can_bus, CAN_FRAME *frame);
+void tasks200ms();
 
 #endif

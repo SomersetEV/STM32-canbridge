@@ -48,7 +48,7 @@ void MX_CAN1_Init(void)
 
   /* USER CODE BEGIN CAN1_Init 1 */
 
-  /* USER CODE END CAN1_Init 1 /*/ //  500kpb to body and screen
+  /* USER CODE END CAN1_Init 1 /*/ //  500kpb 
   hcan1.Instance = CAN1;
   hcan1.Init.Prescaler = 4;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
@@ -80,9 +80,9 @@ void MX_CAN2_Init(void)
 
   /* USER CODE BEGIN CAN2_Init 1 */
 
-  /* USER CODE END CAN2_Init 1 */ // 250kps to charger
+  /* USER CODE END CAN2_Init 1 */ // 500kpb
   hcan2.Instance = CAN2;
-  hcan2.Init.Prescaler = 8;
+  hcan2.Init.Prescaler = 4;
   hcan2.Init.Mode = CAN_MODE_NORMAL;
   hcan2.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan2.Init.TimeSeg1 = CAN_BS1_15TQ;
