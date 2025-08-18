@@ -164,7 +164,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
               VCT_message.data[5] = (btemp_raw >> 8) & 0xFF; // MSB
               blocked = 1;
             break;
-
+/*
             case  0x183: // new ID from Sevon
               PushCan(0, CAN_TX, &screenSoC_message); // send BMS message to screen
               PushCan(0, CAN_TX, &VCT_message); //send BMS message to screen
@@ -210,25 +210,32 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
  
               blocked = 1;
             break;
-            /*
+            */
             case 0x181: // vehicle speed and odo from sevcon not used in Bond bug as adjusting speed through canbridge
              //
 
             PushCan(0, CAN_TX, &VCT_message); //send message to screen
             PushCan(0, CAN_TX, &screenSoC_message); // send message to screen
-            //if (Tick == 0) // send messages to BMS to request data
-            // {
-              PushCan(1, CAN_TX, &Plugstate_message);
-              PushCan(1, CAN_TX, &voltcur_message);
-              PushCan(1, CAN_TX, &temp_message);
-              PushCan(1, CAN_TX, &SoC_message);
-            //  }
+						PushCan(0, CAN_TX, &driveinhibit); // push drive inhibit message to sevconn
+            PushCan(0, CAN_TX, &brakelight); // brake light on regen message to sevvcon
+					//	PushCan(0, CAN_TX, &Invmessage); // push sevcon message to screen
+ 
+           
+						Tick = Tick + 1;
+            if ( Tick > 50 ) //resets every second
+             { //send diag messages to BMS
+              PushCan(0, CAN_TX, &Plugstate_message);
+              PushCan(0, CAN_TX, &voltcur_message);
+              PushCan(0, CAN_TX, &temp_message);
+              PushCan(0, CAN_TX, &SoC_message);
+						Tick = 0;
+              }
 
            
 
               blocked = 1;
             break;
-*/
+
             case 0x217:
             int16_t throttlevalue = frame->data[0] | (frame->data[1] << 8); // Little-endian extraction
             if (throttlevalue < 1 && vehicle_speed_out > 2) //change back to throttle position
