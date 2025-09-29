@@ -155,7 +155,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
             break;
 
             case  0x14FF23D0: //temperature
-              Batttemp = frame->data[6];
+              Batttemp = frame->data[2];
               // Convert to 16-bit scaled value for first receiver
               uint16_t btemp_raw = Batttemp * 10.0f;
 
@@ -177,7 +177,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
                 uint16_t vehicle_speed_raw = frame->data[0] | (frame->data[1] << 8);
 
                 // If scaling is specified in your DBC, apply it here (example: 0.1 km/h per bit)
-               float vehicle_speed = vehicle_speed_raw *  0.45f;
+               float vehicle_speed = vehicle_speed_raw;
 
                 // 3. Convert back to 16-bit integer for CAN transmission
                 vehicle_speed_out = (uint16_t)vehicle_speed;
@@ -258,7 +258,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
             break;
 
             case 0x135:
-            m_temp = frame->data[4] | (frame->data[5] << 8); // Little-endian extraction
+            m_temp = (frame->data[4] | (frame->data[5] << 8)) - 10; // Little-endian extraction. -10 degree offset
             mtempmsg.data[0] = m_temp & 0xFF;        // LSB
             mtempmsg.data[1] = (m_temp >> 8) & 0xFF; // MSB
 
