@@ -82,11 +82,9 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
       
        switch (frame->ID)
         {
-              //block all frames from going into the EV controls canbus except power levels for LDU and speed data coming ou
-
-
-              //HV active status from Fellten Contactor controller, used to control DC-DC enable on Elcon
-              case 0x36A:
+              //block all frames from going into the EV controls canbus except power levels for LDU
+            
+              case 0x36A: //HV active status from Fellten Contactor controller, used to control DC-DC enable on Elcon
               Tick = 0;
               uint16_t HVactive = frame->data[2];
               if (HVactive == 0x0D)
@@ -101,37 +99,12 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
 
               blocked = 1;
             break;
-
-            
-
-            
-
            
             case  0x696: //power limits on EV controls. Sent from drive mode ECU
-            // If SoC more 95%, no regen
-            //If SoC > 90% some regen
-            //If SoC > 80% more regen
-            //If SoC < 80% all the regen
-            //If SoC < 15 % limit max power
-            //If SoC < 10% limit max power even more
+          
             blocked = 0; // allow onto EV control canbus
 
 
-            break;
-
-           
-     
-            case 0355: // SoC from Orion
-           
-            SoC = (frame->data[0]) | (frame->data[1] << 8);
-            
-              blocked = 1;
-            break;
-
-            case 0x001: // Drive modes
-            
-
-              blocked = 1;
             break;
 
         default:
