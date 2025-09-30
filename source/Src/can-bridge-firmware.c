@@ -115,7 +115,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
 
             case  0x106: //motor RPM
             m_rpm = frame->data[4] | (frame->data[5] << 8); // Little-endian extraction
-            vehicle_speed_out = m_rpm;
+            vehicle_speed_out = m_rpm / 19;
             speedmsg.data[0] = vehicle_speed_out & 0xFF;        // LSB
             speedmsg.data[1] = (vehicle_speed_out >> 8) & 0xFF; // MSB
             PushCan(0, CAN_TX, &speedmsg);
