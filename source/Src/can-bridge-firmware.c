@@ -49,13 +49,14 @@ float current = 500;
 uint16_t brakelightvoltage = 0;
 //float = throttlevalue;
 
-uint16_t vehicle_speed_out;
- uint16_t m_temp;
+int16_t vehicle_speed_out;
+int16_t m_temp;
+int16_t m_rpm;
 //static int soctick = 0;
 //static CAN_FRAME screenSoC_message = {.ID = 0x355, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
-//static CAN_FRAME Invmessage = {.ID = 0x181, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
-//static CAN_FRAME mtempmsg = {.ID = 0x401, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+static CAN_FRAME speedmsg = {.ID = 0x257, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}; // bytes 0 and 1 for speed. 0.1 scale
+static CAN_FRAME mtempmsg = {.ID = 0x126, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};// bytes 4 and 5 for temperature
 //static CAN_FRAME driveinhibit = {.ID = 0x201, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 //static CAN_FRAME brakelight = {.ID = 0x205, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
@@ -95,16 +96,30 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
              else 
              {
               DCDCenablemessage.data[0] = 0x00;
-             }    
+             }
 
               blocked = 1;
             break;
            
             case  0x696: //power limits on EV controls. Sent from drive mode ECU
-          
             blocked = 0; // allow onto EV control canbus
+            break;
 
+            case  0x306: //motor temperatures
+            m_temp = frame->data[2] - 40; // -40 offset
+            mtempmsg.data[4] = m_temp & 0xFF;        // LSB
+            mtempmsg.data[5] = (m_temp >> 8) & 0xFF; // MSB
+            PushCan(0, CAN_TX, &mtempmsg);
+            blocked = 1; // dont allow onto main canbus
+            break;
 
+            case  0x106: //motor RPM
+            m_rpm = frame->data[4] | (frame->data[5] << 8); // Little-endian extraction
+            vehicle_speed_out = m_rpm;
+            speedmsg.data[0] = vehicle_speed_out & 0xFF;        // LSB
+            speedmsg.data[1] = (vehicle_speed_out >> 8) & 0xFF; // MSB
+            PushCan(0, CAN_TX, &speedmsg);
+            blocked = 1; // dont allow onto main canbus
             break;
 
         default:
