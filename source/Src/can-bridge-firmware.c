@@ -47,13 +47,13 @@ void calc_checksum4(CAN_FRAME *frame);
 float voltage = 400;
 float current = 500;
 static volatile int8_t plugstate = 0x00;
-static volatile int16_t SoC = 69;
+static volatile uint16_t SoC = 69;
 static volatile int8_t Batttemp = 69;
 uint16_t brakelightvoltage = 0;
 //float = throttlevalue;
 static uint16_t Tick = 0;
-uint16_t vehicle_speed_out;
- uint16_t m_temp;
+int16_t vehicle_speed_out;
+int16_t m_temp;
 //static int soctick = 0;
 static CAN_FRAME screenSoC_message = {.ID = 0x355, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 static CAN_FRAME VCT_message = {.ID = 0x356, .dlc = 8, .ide = 0, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
@@ -94,11 +94,11 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
                 uint16_t voltage_out_raw = (uint16_t)(voltage);
           
              // Get current
-              uint16_t current_raw = (frame->data[4]) | (frame->data[5] << 8);
+              int16_t current_raw = (frame->data[4]) | (frame->data[5] << 8);
                // Convert to physical value if needed
                current = current_raw;
                  // Prepare current for outgoing CAN message (convert back to raw if needed)
-              uint16_t current_out_raw = (uint16_t)(current);
+              int16_t current_out_raw = (int16_t)(current);
 
               VCT_message.data[0] = voltage_out_raw & 0xFF;        // LSB
               VCT_message.data[1] = (voltage_out_raw >> 8) & 0xFF; // MSB
@@ -155,13 +155,14 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
             break;
 
             case  0x14FF23D0: //temperature
-              Batttemp = frame->data[2];
+              Batttemp = frame->data[3] * 100;
               // Convert to 16-bit scaled value for first receiver
-              uint16_t btemp_raw = Batttemp * 10.0f;
+              //int16_t btemp_raw = (int16_t)(Batttemp);
 
               // Place into outgoing CAN message bytes 4 and 5 (little-endian)
-              VCT_message.data[4] = btemp_raw & 0xFF;        // LSB
-              VCT_message.data[5] = (btemp_raw >> 8) & 0xFF; // MSB
+             // VCT_message.data[4] = btemp_raw & 0xFF;        // LSB
+             // VCT_message.data[5] = (btemp_raw >> 8) & 0xFF; // MSBs
+             VCT_message.data[5] = Batttemp; // MSBs
               blocked = 1;
             break;
 
@@ -174,7 +175,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
               if (plugstate == 0x01) // if disconnected then send inverter data to screen for drive mode
               { 
                 // Vehicle speed is 16 bits, little endian, starting at byte 0
-                uint16_t vehicle_speed_raw = frame->data[0] | (frame->data[1] << 8);
+                int16_t vehicle_speed_raw = frame->data[0] | (frame->data[1] << 8);
 
                 // If scaling is specified in your DBC, apply it here (example: 0.1 km/h per bit)
                float vehicle_speed = vehicle_speed_raw;
