@@ -48,7 +48,7 @@ float voltage = 400;
 float current = 500;
 static volatile int8_t plugstate = 0x00;
 static volatile uint16_t SoC = 69;
-static volatile int8_t Batttemp = 69;
+int16_t Batttemp = 69;
 uint16_t brakelightvoltage = 0;
 //float = throttlevalue;
 static uint16_t Tick = 0;
@@ -155,14 +155,14 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
             break;
 
             case  0x14FF23D0: //temperature
-              Batttemp = frame->data[3] * 100;
+              Batttemp = frame->data[3] * 10;
               // Convert to 16-bit scaled value for first receiver
               //int16_t btemp_raw = (int16_t)(Batttemp);
 
               // Place into outgoing CAN message bytes 4 and 5 (little-endian)
-             // VCT_message.data[4] = btemp_raw & 0xFF;        // LSB
-             // VCT_message.data[5] = (btemp_raw >> 8) & 0xFF; // MSBs
-             VCT_message.data[5] = Batttemp; // MSBs
+            VCT_message.data[4] = Batttemp & 0xFF;        // LSB
+            VCT_message.data[5] = (Batttemp >> 8) & 0xFF; // MSBs
+          
               blocked = 1;
             break;
 
