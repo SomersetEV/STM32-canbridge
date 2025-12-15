@@ -106,7 +106,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
             break;
 
             case  0x306: //motor temperatures
-            m_temp = frame->data[2] - 40; // -40 offset
+            m_temp = frame->data[4] - 40; // -40 offset
             mtempmsg.data[4] = m_temp & 0xFF;        // LSB
             mtempmsg.data[5] = (m_temp >> 8) & 0xFF; // MSB
             PushCan(0, CAN_TX, &mtempmsg);
