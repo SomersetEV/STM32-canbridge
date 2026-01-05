@@ -88,7 +88,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
               case 0x36A: //HV active status from Fellten Contactor controller, used to control DC-DC enable on Elcon
               Tick = 0;
               uint16_t HVactive = frame->data[2];
-              if (HVactive == 0x0D)
+              if (HVactive == 0x0E) //was 0x0D
              {
                DCDCenablemessage.data[0] = 0x01;
              }
