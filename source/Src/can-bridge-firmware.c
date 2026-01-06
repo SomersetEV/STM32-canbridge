@@ -46,7 +46,7 @@ void calc_checksum4(CAN_FRAME *frame);
 
 float voltage = 400;
 float current = 500;
-bool HVPresent = false;
+uint8_t HVPresent = 0x00;
 uint16_t brakelightvoltage = 0;
 //float = throttlevalue;
 
@@ -90,7 +90,7 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
               Tick = 0;
              // uint16_t HVactive = frame->data[2];
               HVPresent = (frame->data[1] >> 5) & 1;
-              if (HVPresent == true) //was 0x0D
+              if (HVPresent == 0x01) //was 0x0D
              {
                DCDCenablemessage.data[0] = 0x01;
              }
