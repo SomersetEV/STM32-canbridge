@@ -46,6 +46,7 @@ void calc_checksum4(CAN_FRAME *frame);
 
 float voltage = 400;
 float current = 500;
+bool HVPresent = false;
 uint16_t brakelightvoltage = 0;
 //float = throttlevalue;
 
@@ -87,8 +88,9 @@ void can_handler(uint8_t can_bus, CAN_FRAME *frame)
             
               case 0x36A: //HV active status from Fellten Contactor controller, used to control DC-DC enable on Elcon
               Tick = 0;
-              uint16_t HVactive = frame->data[2];
-              if (HVactive == 0x0E) //was 0x0D
+             // uint16_t HVactive = frame->data[2];
+              HVPresent = (frame->data[1] >> 5) & 1;
+              if (HVPresent == true) //was 0x0D
              {
                DCDCenablemessage.data[0] = 0x01;
              }
