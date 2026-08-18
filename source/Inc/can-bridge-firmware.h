@@ -25,10 +25,12 @@
 volatile extern uint8_t My_Battery;
 volatile extern uint8_t My_Leaf;
 
-static uint16_t Tick = 0;
-static uint16_t SoC = 0;
+/* Declared extern and defined once in can-bridge-firmware.c. As statics these
+   gave every including translation unit its own private copy. */
+extern uint16_t Tick;
+extern uint16_t SoC;
 
-static CAN_FRAME DCDCenablemessage = {.ID = 0x18008FD0, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+extern CAN_FRAME DCDCenablemessage;
 
 void can_handler(uint8_t can_bus, CAN_FRAME *frame);
 void tasks200ms();

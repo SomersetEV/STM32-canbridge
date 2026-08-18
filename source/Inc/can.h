@@ -45,7 +45,7 @@ void MX_CAN2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
-#define CAN_QUEUE  16
+#define CAN_QUEUE  64
 
 #define MYCAN1     0
 #define MYCAN2     1
@@ -87,8 +87,11 @@ typedef struct
     uint8_t errorFlag;    
 }MYCAN_Errors;
 
+extern volatile uint16_t canDropped[2][2];
+
 CQ_STATUS PushCan( uint8_t canNum, uint8_t TxRx, CAN_FRAME *frame );
 CQ_STATUS PopCan( uint8_t canNum, uint8_t TxRx, CAN_FRAME *frame );
+CQ_STATUS PeekCan( uint8_t canNum, uint8_t TxRx, CAN_FRAME *frame );
 uint8_t LenCan( uint8_t canNum, uint8_t TxRx );
 void sendCan( uint8_t channel );
 void HAL_CAN_RxFIFO0MsgPendingCallback1( CAN_HandleTypeDef *canChan );

@@ -35,6 +35,11 @@ typedef enum
 
 uint8_t cur = 0;
 
+/* Definitions for the globals declared extern in can-bridge-firmware.h */
+uint16_t Tick = 0;
+uint16_t SoC = 0;
+CAN_FRAME DCDCenablemessage = {.ID = 0x18008FD0, .dlc = 8, .ide = 1, .rtr = 0, .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+
 
 void convert_array_to_5bc(Leaf_2011_5BC_message * dest, uint8_t * src);
 void calc_crc8(CAN_FRAME *frame);

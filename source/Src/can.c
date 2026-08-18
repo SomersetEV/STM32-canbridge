@@ -246,12 +246,18 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 
 /* USER CODE BEGIN 1 */
 
+/* CAN1 and CAN2 share 28 filter banks on this device. Banks below
+   CAN_SLAVE_START_BANK belong to CAN1, banks at or above it belong to CAN2.
+   SlaveStartFilterBank is a single global field, so both calls must pass the
+   same value. */
+#define CAN_SLAVE_START_BANK  14u
+
 void AddCANFilters(CAN_HandleTypeDef* canHandle)
 {
   CAN_FilterTypeDef  sFilterConfig;
 
   /*##-2- Configure the CAN Filter ###########################################*/
-  sFilterConfig.FilterBank = 0;
+  sFilterConfig.FilterBank = ( canHandle->Instance == CAN2 ) ? CAN_SLAVE_START_BANK : 0u;
   sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
   sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
   sFilterConfig.FilterIdHigh = 0x0000;
@@ -260,7 +266,7 @@ void AddCANFilters(CAN_HandleTypeDef* canHandle)
   sFilterConfig.FilterMaskIdLow = 0x0000;
   sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
   sFilterConfig.FilterActivation = ENABLE;
-  sFilterConfig.SlaveStartFilterBank = 0;
+  sFilterConfig.SlaveStartFilterBank = CAN_SLAVE_START_BANK;
 
   if (HAL_CAN_ConfigFilter(canHandle, &sFilterConfig) != HAL_OK)
   {
@@ -339,16 +345,31 @@ void sendCan( uint8_t channel )
     CAN_TxHeaderTypeDef header;
     uint8_t data[8];
     uint32_t mailbox;
-    
-    if( LenCan( channel, CAN_TX ) )
+
+    if( channel > 1 )
     {
-        if( HAL_CAN_GetTxMailboxesFreeLevel( CANChanRef[ channel ] ) == 3 )
+        return;
+    }
+
+    /* Fill every free mailbox. Peek first and only pop once the frame is
+       accepted, so a rejected frame stays queued instead of being lost. */
+    while( LenCan( channel, CAN_TX ) &&
+           ( HAL_CAN_GetTxMailboxesFreeLevel( CANChanRef[ channel ] ) > 0 ) )
+    {
+        if( PeekCan( channel, CAN_TX, &frame ) != CQ_OK )
         {
-            PopCan( channel, CAN_TX, &frame );
-            CanTxToSTM(&frame, &header, data);
-            HAL_CAN_AddTxMessage( CANChanRef[ channel ], &header, data, &mailbox );
+            break;
         }
-    } 
+
+        CanTxToSTM(&frame, &header, data);
+
+        if( HAL_CAN_AddTxMessage( CANChanRef[ channel ], &header, data, &mailbox ) != HAL_OK )
+        {
+            break;
+        }
+
+        PopCan( channel, CAN_TX, &frame );
+    }
 }
 
 
@@ -365,8 +386,18 @@ static void CanTxToSTM(CAN_FRAME *frame, CAN_TxHeaderTypeDef *header, uint8_t *d
         header->IDE = CAN_ID_STD;    
     }
     
-    header->DLC = frame->dlc;
-    
+    /* Clamp: a DLC above 8 would overrun the 8-byte payload buffer. */
+    header->DLC = ( frame->dlc > 8u ) ? 8u : frame->dlc;
+
+    /* Must be set explicitly: the header is a stack struct, and HAL_CAN_AddTxMessage
+       reads this field. A garbage value of ENABLE sets the TGT bit, which replaces
+       data bytes 6 and 7 with a transmit timestamp. */
+    header->TransmitGlobalTime = DISABLE;
+
+    /* Always clear the payload - sendCan() reuses one buffer across frames,
+       so stale bytes from a previous frame must not leak into this one. */
+    memset( data, 0, 8 );
+
     if( frame->rtr )
     {
         header->RTR = CAN_RTR_REMOTE;
@@ -395,8 +426,16 @@ static void CANSTMToRx(CAN_FRAME *frame, CAN_RxHeaderTypeDef *header, uint8_t *d
         frame->ide = 0;       
     }
     
-    frame->dlc = (uint8_t)header->DLC;
-    
+    /* Clamp before the memcpy below - DLC comes from hardware. */
+    frame->dlc = ( header->DLC > 8u ) ? 8u : (uint8_t)header->DLC;
+
+    /* The callers declare CAN_FRAME on the stack uninitialised, and the whole
+       struct is then copied into the queue. Clear the payload and pad so a
+       frame shorter than 8 bytes cannot carry stack garbage in data[dlc..7] -
+       can_handler() indexes fixed byte offsets without checking dlc. */
+    memset( frame->data, 0, sizeof( frame->data ) );
+    frame->pad = 0;
+
     if( header->RTR == CAN_RTR_REMOTE )
     {
         frame->rtr = 1;
@@ -404,33 +443,42 @@ static void CANSTMToRx(CAN_FRAME *frame, CAN_RxHeaderTypeDef *header, uint8_t *d
     else
     {
         frame->rtr = 0;
-        
+
         if( frame->dlc > 0 )
         {
-            memcpy( frame->data, data, frame->dlc );            
+            memcpy( frame->data, data, frame->dlc );
         }
     }
 }
 
 
+/* Dropped-frame counters, one per queue. Not used by the firmware itself -
+   read them in the debugger to see whether a queue is overflowing. */
+volatile uint16_t canDropped[2][2] = {0};
+
+/* PushCan must never transmit: it is called from the RX interrupt, and calling
+   sendCan() here would make the ISR and the main loop both consumers of the TX
+   queue. The main loop drains both TX queues every iteration instead. */
 CQ_STATUS PushCan( uint8_t canNum, uint8_t TxRx, CAN_FRAME *frame )
 {
     CQ_STATUS retVal = CQ_FULL;
 
-    if( canNum > 1 )
+    if(( canNum > 1 ) || ( TxRx > 1 ))
     {
         return CQ_IGNORED;
     }
- 
+
     if((( canHead[ TxRx ][canNum] + 1 ) % CAN_QUEUE ) != canTail[ TxRx ][ canNum ] )
     {
         memcpy( CanBuffer[ TxRx ][ canNum ][ canHead[ TxRx ][ canNum ]], frame, sizeof(CAN_FRAME) );
-        canHead[ TxRx ][ canNum ] = ( canHead[ TxRx ][ canNum ] + 1 ) % CAN_QUEUE;        
+        canHead[ TxRx ][ canNum ] = ( canHead[ TxRx ][ canNum ] + 1 ) % CAN_QUEUE;
         retVal = CQ_OK;
     }
-    
-    sendCan( canNum );
-   
+    else
+    {
+        canDropped[ TxRx ][ canNum ]++;
+    }
+
     return retVal;
 }
 
@@ -438,11 +486,36 @@ CQ_STATUS PushCan( uint8_t canNum, uint8_t TxRx, CAN_FRAME *frame )
 CQ_STATUS PopCan( uint8_t canNum, uint8_t TxRx, CAN_FRAME *frame )
 {
     CQ_STATUS retVal = CQ_EMPTY;
-    
+
+    if(( canNum > 1 ) || ( TxRx > 1 ))
+    {
+        return CQ_IGNORED;
+    }
+
     if( canTail[ TxRx ][ canNum ] != canHead[ TxRx ][ canNum ] )
     {
         memcpy( frame, CanBuffer[ TxRx ][ canNum ][ canTail[ TxRx ][ canNum ] ], sizeof(CAN_FRAME) );
-        canTail[ TxRx ][ canNum ] = ( canTail[ TxRx ][ canNum ] + 1 ) % CAN_QUEUE;         
+        canTail[ TxRx ][ canNum ] = ( canTail[ TxRx ][ canNum ] + 1 ) % CAN_QUEUE;
+        retVal = CQ_OK;
+    }
+
+    return retVal;
+}
+
+
+/* Copy the frame at the tail without consuming it. */
+CQ_STATUS PeekCan( uint8_t canNum, uint8_t TxRx, CAN_FRAME *frame )
+{
+    CQ_STATUS retVal = CQ_EMPTY;
+
+    if(( canNum > 1 ) || ( TxRx > 1 ))
+    {
+        return CQ_IGNORED;
+    }
+
+    if( canTail[ TxRx ][ canNum ] != canHead[ TxRx ][ canNum ] )
+    {
+        memcpy( frame, CanBuffer[ TxRx ][ canNum ][ canTail[ TxRx ][ canNum ] ], sizeof(CAN_FRAME) );
         retVal = CQ_OK;
     }
 
@@ -452,18 +525,16 @@ CQ_STATUS PopCan( uint8_t canNum, uint8_t TxRx, CAN_FRAME *frame )
 
 uint8_t LenCan( uint8_t canNum, uint8_t TxRx )
 {
-    if( canHead[ TxRx ][ canNum ] == canTail[ TxRx ][ canNum ] )
+    if(( canNum > 1 ) || ( TxRx > 1 ))
     {
         return 0;
     }
-    else if( canHead[ TxRx ][ canNum ] > canTail[ TxRx ][ canNum ] )
-    {
-        return canHead[ TxRx ][ canNum ] - canTail[ TxRx ][ canNum ];
-    }
-    else
-    {
-        return CAN_QUEUE - canTail[ TxRx ][ canNum ] + canHead[ TxRx ][ canNum ];
-    }
+
+    /* Single read of each index, so a concurrent update cannot be seen twice. */
+    uint8_t head = canHead[ TxRx ][ canNum ];
+    uint8_t tail = canTail[ TxRx ][ canNum ];
+
+    return (uint8_t)(( head - tail + CAN_QUEUE ) % CAN_QUEUE );
 }
 
 

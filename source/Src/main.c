@@ -68,11 +68,10 @@ int main(void)
     HAL_CAN_RegisterCallback(&hcan1, HAL_CAN_RX_FIFO0_MSG_PENDING_CB_ID, HAL_CAN_RxFIFO0MsgPendingCallback1 );
     HAL_CAN_RegisterCallback(&hcan1, HAL_CAN_RX_FIFO1_MSG_PENDING_CB_ID, HAL_CAN_RxFIFO1MsgPendingCallback1 );    
     HAL_CAN_RegisterCallback(&hcan2, HAL_CAN_RX_FIFO0_MSG_PENDING_CB_ID, HAL_CAN_RxFIFO0MsgPendingCallback2 );
-    HAL_CAN_RegisterCallback(&hcan2, HAL_CAN_RX_FIFO1_MSG_PENDING_CB_ID, HAL_CAN_RxFIFO1MsgPendingCallback2 ); 
-		
-		HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
-		HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO1_MSG_PENDING);
-    
+    HAL_CAN_RegisterCallback(&hcan2, HAL_CAN_RX_FIFO1_MSG_PENDING_CB_ID, HAL_CAN_RxFIFO1MsgPendingCallback2 );
+
+    /* Filters, HAL_CAN_Start and the RX/TX notifications are all set up by
+       AddCANFilters - do not activate notifications separately here. */
     AddCANFilters( &hcan1 );
     AddCANFilters( &hcan2 );
 
@@ -86,35 +85,77 @@ int main(void)
             last_tick = HAL_GetTick();
    
             tasks200ms();
-						
-						if((LenCan( MYCAN1, CAN_RX )) == 0 && (LenCan( MYCAN2, CAN_RX ) == 0)){
-							//Can bus is idle
-							idleTick++;
-							
-							if(idleTick > 25){ //No can messages for 5s
-								HAL_SuspendTick();
-								HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
-								HAL_ResumeTick();
-								idleTick = 0;
-							}
-						}
+
+            /* tasks200ms() has just queued a TX frame, so push the queues into
+               the mailboxes before testing for idle - otherwise the TX check
+               below is always false and we would never sleep. */
+            sendCan( MYCAN1 );
+            sendCan( MYCAN2 );
+
+            /* Idle means nothing left in any queue. The mailboxes are NOT
+               checked here: sendCan() above has just loaded the DC-DC frame,
+               so the free level is still 2 and an idle tick would never be
+               counted. In-flight frames are checked at the sleep point below. */
+            if(( LenCan( MYCAN1, CAN_RX ) == 0 ) && ( LenCan( MYCAN2, CAN_RX ) == 0 ) &&
+               ( LenCan( MYCAN1, CAN_TX ) == 0 ) && ( LenCan( MYCAN2, CAN_TX ) == 0 ))
+            {
+                //Can bus is idle
+                idleTick++;
+
+                if(idleTick > 25){ //No can messages for 5s
+                    /* Final guard: do not sleep on a frame still in a mailbox.
+                       Stay awake one more tick and re-test instead. */
+                    if(( HAL_CAN_GetTxMailboxesFreeLevel( &hcan1 ) == 3 ) &&
+                       ( HAL_CAN_GetTxMailboxesFreeLevel( &hcan2 ) == 3 ))
+                    {
+                        HAL_SuspendTick();
+                        HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+                        HAL_ResumeTick();
+                        idleTick = 0;
+                        /* Re-base the scheduler so we do not fire a burst of
+                           catch-up 200ms ticks after a long sleep. */
+                        last_tick = HAL_GetTick();
+                    }
+                    else
+                    {
+                        /* Hold at the threshold so we retry next tick. */
+                        idleTick = 26;
+                    }
+                }
+            }
+            else
+            {
+                idleTick = 0;
+            }
         }
 
         
-        if( LenCan( MYCAN1, CAN_RX ) > 0 )
+        /* Drain the RX queues rather than taking one frame per iteration -
+           otherwise frames arrive faster than they are handled and the queue
+           becomes a growing latency backlog instead of a short buffer. */
+        while( LenCan( MYCAN1, CAN_RX ) > 0 )
         {
-						idleTick = 0;
+            idleTick = 0;
             PopCan( MYCAN1, CAN_RX, &frame );
-            
+
             can_handler( MYCAN1, &frame );
+
+            /* can_handler() enqueues onto the TX queues, and PushCan() no
+               longer transmits. Keep the mailboxes fed inside the loop so a
+               long RX burst cannot overflow a TX queue before we get out. */
+            sendCan( MYCAN1 );
+            sendCan( MYCAN2 );
         }
-        
-        if( LenCan( MYCAN2, CAN_RX ) > 0 )
-        {   
-						idleTick = 0;
+
+        while( LenCan( MYCAN2, CAN_RX ) > 0 )
+        {
+            idleTick = 0;
             PopCan( MYCAN2, CAN_RX, &frame );
 
-            can_handler( MYCAN2, &frame );            
+            can_handler( MYCAN2, &frame );
+
+            sendCan( MYCAN1 );
+            sendCan( MYCAN2 );
         }
 
         sendCan( MYCAN1 );
