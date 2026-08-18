@@ -1865,9 +1865,9 @@
       <ActiveTab>0</ActiveTab>
       <Doc>
         <Name>..\Src\can-bridge-firmware.c</Name>
-        <ColumnNumber>11</ColumnNumber>
+        <ColumnNumber>0</ColumnNumber>
         <TopLine>67</TopLine>
-        <CurrentLine>110</CurrentLine>
+        <CurrentLine>78</CurrentLine>
         <Folding>1</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>
